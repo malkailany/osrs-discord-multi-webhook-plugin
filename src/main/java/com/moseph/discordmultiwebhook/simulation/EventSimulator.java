@@ -1,5 +1,6 @@
 package com.moseph.discordmultiwebhook.simulation;
 
+import com.moseph.discordmultiwebhook.DiscordMultiWebhookConfig;
 import com.moseph.discordmultiwebhook.DiscordMultiWebhookPlugin;
 import com.moseph.discordmultiwebhook.model.EventType;
 import lombok.extern.slf4j.Slf4j;
@@ -11,6 +12,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.Random;
 
 /**
  * Handles simulation of in-game events for testing purposes
@@ -21,16 +23,20 @@ public class EventSimulator {
     private final ClientThread clientThread;
     private final ScheduledExecutorService executorService;
     private final DiscordMultiWebhookPlugin plugin;
+    private final DiscordMultiWebhookConfig config;
+    private final Random random = new Random();
     
     public EventSimulator(
             Client client,
             ClientThread clientThread,
             ScheduledExecutorService executorService,
-            DiscordMultiWebhookPlugin plugin) {
+            DiscordMultiWebhookPlugin plugin,
+            DiscordMultiWebhookConfig config) {
         this.client = client;
         this.clientThread = clientThread;
         this.executorService = executorService;
         this.plugin = plugin;
+        this.config = config;
     }
     
     /**
@@ -75,19 +81,35 @@ public class EventSimulator {
      * Simulates level up notification
      */
     public void simulateLevelUpEvent(boolean withImage) {
+        // Create random skill and level for testing
+        String[] skills = {"Attack", "Defence", "Strength", "Hitpoints", "Ranged", "Prayer", 
+            "Magic", "Cooking", "Woodcutting", "Fletching", "Fishing", "Firemaking", "Crafting", 
+            "Smithing", "Mining", "Herblore", "Agility", "Thieving", "Slayer", "Farming", 
+            "Runecraft", "Hunter", "Construction"};
+            
+        String skill = skills[random.nextInt(skills.length)];
+        int level = random.nextInt(98) + 2; // Level 2-99
+        int threshold = config.levelUpThreshold();
+        
+        // If threshold is > 1, make the test level a multiple of the threshold
+        if (threshold > 1) {
+            level = (level / threshold) * threshold;
+            if (level < 2) level = threshold; // Ensure at least the threshold value
+            if (level > 99) level = 99; // Cap at 99
+        }
+
         Map<String, String> variables = new HashMap<>();
-        variables.put("SKILL", "Slayer");
-        variables.put("LEVEL", "99");
+        variables.put("SKILL", skill);
+        variables.put("LEVEL", String.valueOf(level));
         variables.put("USERNAME", getPlayerName());
         
-        log.info("Simulating Level Up notification for: Level 99 Slayer (with image: {})", withImage);
-        clientThread.invoke(() -> client.addChatMessage(ChatMessageType.GAMEMESSAGE, "", 
-            "Discord webhook: Level up - 99 Slayer", null));
+        log.info("Simulating level up notification: {} level {} (threshold: {})", skill, level, threshold);
+        plugin.queueNotification(EventType.LEVEL_UP, variables);
         
         if (withImage) {
-            simulateWithImage(EventType.LEVEL_UP, variables);
-        } else {
-            plugin.queueNotification(EventType.LEVEL_UP, variables);
+            plugin.captureScreenshot(image -> {
+                log.info("Captured screenshot for level up test (null: {})", image == null);
+            });
         }
     }
     

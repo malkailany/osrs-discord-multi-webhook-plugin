@@ -102,7 +102,7 @@ public class DiscordMultiWebhookPlugin extends Plugin
 		// Initialize services
 		discordService = new DiscordService(okHttpClient);
 		notificationService = new NotificationService(config);
-		eventSimulator = new EventSimulator(client, clientThread, executorService, this);
+		eventSimulator = new EventSimulator(client, clientThread, executorService, this, config);
 		
 		// Validate global webhook URL
 		String globalUrl = DiscordUtils.validateWebhookUrl(config.globalWebhookUrl());
@@ -214,14 +214,25 @@ public class DiscordMultiWebhookPlugin extends Plugin
 		{
 			String skill = levelUpMatcher.group(1);
 			String level = levelUpMatcher.group(2);
+			int levelValue = Integer.parseInt(level);
+			int threshold = config.levelUpThreshold();
 			
-			Map<String, String> variables = new HashMap<>();
-			variables.put("SKILL", skill);
-			variables.put("LEVEL", level);
-			variables.put("USERNAME", getPlayerName());
-			
-			log.info("Level up match found: {} level {}", skill, level);
-			queueNotification(EventType.LEVEL_UP, variables);
+			// Only send notification if level is a multiple of the threshold or threshold is 1
+			if (threshold <= 1 || levelValue % threshold == 0)
+			{
+				Map<String, String> variables = new HashMap<>();
+				variables.put("SKILL", skill);
+				variables.put("LEVEL", level);
+				variables.put("USERNAME", getPlayerName());
+				
+				log.info("Level up match found: {} level {} (meets threshold of {})", skill, level, threshold);
+				queueNotification(EventType.LEVEL_UP, variables);
+			}
+			else
+			{
+				log.debug("Skipping level up notification for {} level {} as it doesn't meet threshold of {}", 
+					skill, level, threshold);
+			}
 		}
 		
 		// Pet detection

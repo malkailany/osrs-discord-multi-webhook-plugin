@@ -291,6 +291,18 @@ public interface DiscordMultiWebhookConfig extends Config
 		return "%USERNAME% just achieved level %LEVEL% in %SKILL%!";
 	}
 
+	@ConfigItem(
+		keyName = "levelUpThreshold",
+		name = "Level Threshold",
+		description = "Only send notifications for levels that are multiples of this value (e.g. 5 for notifications at 5, 10, 15, etc.). Use 1 to notify on every level.",
+		position = 36,
+		section = levelUpSection
+	)
+	default int levelUpThreshold()
+	{
+		return 1;
+	}
+
 	// LOOT SECTION
 	@ConfigSection(
 		name = "Loot",
